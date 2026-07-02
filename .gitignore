@@ -1,0 +1,9 @@
+.cpcache/
+target/
+.shadow-cljs/
+out/
+*.log
+/db/
+.nrepl-port
+*.jar
+node_modules/
