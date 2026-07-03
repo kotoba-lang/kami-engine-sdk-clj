@@ -13,8 +13,7 @@
   CLJ loop). See ADR-0040 / clj-wgsl-ledger Phase 1.2.
 
   Pure — no IO, no ECS, no GPU. A system threads `(world dt)` and calls
-  `advance` per entity; this namespace only owns the table walker."
-  (:require [clojure.set :as set]))
+  `advance` per entity; this namespace only owns the table walker.")
 
 (defn fsm
   "Build a finite-state machine from a sequence of transition maps.
@@ -77,7 +76,7 @@
   "All states reachable from `machine`'s initial state (BFS over transition
   rows). Useful for linting a scene's FSM table — mirrors the 'unknown state'
   lint `kami-scene` does for enums."
-  [{:keys [initial rows] :as machine}]
+  [{:keys [initial rows]}]
   (loop [frontier [initial] seen #{initial}]
     (if (empty? frontier)
       seen

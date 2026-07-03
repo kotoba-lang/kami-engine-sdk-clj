@@ -62,7 +62,7 @@
   (and `f` is expected to be O(1) in CLJ or dispatch a bulk buffer to
   WGSL/native, not loop per-entity in CLJ on the hot path)."
   ([schedule world dt] (run-schedule schedule world dt {}))
-  ([schedule world dt opts]
+  ([schedule world dt _opts]
    (reduce
     (fn [w spec]
       (if-let [f (spec-fn spec)]

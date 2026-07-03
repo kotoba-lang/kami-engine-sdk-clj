@@ -3,8 +3,7 @@
   (ITD / ILD / distance / gains) and per-backend lowering. Pins the data
   contract long before any audio device is wired up."
   (:require [clojure.test :refer [deftest testing is]]
-            [kami.binaural :as b]
-            [kami.wgsl   :as wgsl]))
+            [kami.binaural :as b]))
 
 (defn- close? [a x] (< (Math/abs (- a x)) 1e-6))
 
