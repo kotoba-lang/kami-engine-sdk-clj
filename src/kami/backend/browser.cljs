@@ -11,9 +11,10 @@
   (:require [kami.gpu :as gpu]
             [cljs.core.async :refer [go]]))
 
-(defn- ->u8 [buffer]
+(defn- ->u8
   "Convert the packed :buffer (a vector of 0-255 ints) to a Uint8Array for the
   wasm boundary. `kami.ipc/pack` already produced GPU-aligned bytes."
+  [buffer]
   (js/Uint8Array. (into-array buffer)))
 
 (defn- ->f32 [xs] (js/Float32Array. (into-array xs)))

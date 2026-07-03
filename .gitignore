@@ -1,5 +1,6 @@
 .cpcache/
 target/
+.clj-kondo/.cache/
 .shadow-cljs/
 out/
 *.log

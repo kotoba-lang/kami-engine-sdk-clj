@@ -25,9 +25,9 @@
   semantics). Supports :positive-set / :negative-set (multiple keys) too."
   [held {:keys [positive negative positive-set negative-set scale] :or {scale 1.0}}]
   (let [pos? (or (and positive (contains? held positive))
-                 (and positive-set (not (empty? (set/intersection held positive-set)))))
+                 (and positive-set (seq (set/intersection held positive-set))))
         neg? (or (and negative (contains? held negative))
-                 (and negative-set (not (empty? (set/intersection held negative-set)))))]
+                 (and negative-set (seq (set/intersection held negative-set))))]
     (cond
       (and pos? neg?) 0.0
       pos?            (float scale)
@@ -47,7 +47,7 @@
   (reduce
    (fn [acc {:keys [action keys]}]
      (let [keys (if (set? keys) keys #{keys})]
-       (if (not (empty? (set/intersection held keys)))
+       (if (seq (set/intersection held keys))
          (conj acc action) acc)))
    #{} (:actions table)))
 

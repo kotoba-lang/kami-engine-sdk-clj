@@ -13,9 +13,9 @@
 
 (defrecord MockBackend [log]
   gpu/IGpuBackend
-  (register-mesh!     [_ id v i] (swap! log conj [:mesh id]) 1)
-  (register-material! [_ id p]   (swap! log conj [:material id]) 1)
-  (register-shader!   [_ id w l] (swap! log conj [:shader id]) 1)
+  (register-mesh!     [_ id _v _i] (swap! log conj [:mesh id]) 1)
+  (register-material! [_ id _p]    (swap! log conj [:material id]) 1)
+  (register-shader!   [_ id _w _l] (swap! log conj [:shader id]) 1)
   (submit-frame!      [_ packed] (swap! log conj [:submit (:ncols packed) (:len packed)]))
   (resize!            [_ w h]    (swap! log conj [:resize w h])))
 

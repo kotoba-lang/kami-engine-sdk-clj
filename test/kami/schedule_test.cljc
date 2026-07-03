@@ -63,16 +63,16 @@
     (let [log (atom [])
           s (sched/schedule
              [{:system :first  :order 10 :query #{:transform}
-               :fn (fn [w dt ents]
+               :fn (fn [w _dt ents]
                      (let [w' (assoc w ::marker :first)]
                        (swap! log conj [:first (count ents) (::marker w)])
                        w'))}
               {:system :second :order 20 :query #{:transform}
-               :fn (fn [w dt ents]
+               :fn (fn [w _dt ents]
                      (swap! log conj [:second (count ents) (::marker w)])
                      (assoc w ::marker :second))}
               {:system :third  :order 30 :query #{:transform}
-               :fn (fn [w dt ents]
+               :fn (fn [w _dt ents]
                      (swap! log conj [:third (count ents) (::marker w)])
                      (assoc w ::marker :third))}])
           out (sched/run-schedule s (world) 16.0)]
@@ -104,8 +104,8 @@
                :fn (fn [_ _ _] nil)}])]
       (is (identical? w (sched/run-schedule s w 16.0))))))
 
+;; An empty :query (#{}) matches every entity in the world (per kami.ecs/query).
 (deftest run-schedule-empty-query-matches-all
-  "An empty :query (#{}) matches every entity in the world (per kami.ecs/query)."
   (let [saw (atom #{})
         s (sched/schedule
            [{:system :all :order 0 :query #{}

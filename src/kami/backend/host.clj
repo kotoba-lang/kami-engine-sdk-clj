@@ -3,8 +3,7 @@
   'browser + Rust backend' critical path (ARCHITECTURE.md §4/§9), but the
   `IGpuBackend` protocol leaves room for it: a wasmtime-embedded kami-render
   component, or wgpu-native via FFI for offscreen render (thumbnails, CI golden
-  images). Stub only."
-  (:require [kami.gpu :as gpu]))
+  images). Stub only.")
 
 (defn make
   "Create a headless host backend. STUB — would embed kami-render (wasmtime
