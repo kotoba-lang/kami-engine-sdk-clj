@@ -32,8 +32,7 @@
   keywords for component keys, matching `kami.schedule-test`'s convention."
   [m]
   (let [ents (map (fn [i]
-                    {:kami/eid   (java.util.UUID/fromString
-                                  (format "00000000-0000-0000-0000-%012d" (inc i)))
+                    {:kami/eid   (str "eid-" (inc i))
                      :transform  {:translation [i 0 0]}
                      :velocity   {:linear [1 0 0]}})
                   (range m))]

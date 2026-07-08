@@ -48,6 +48,9 @@
                            {:git/tag "v0.5.1" :git/sha "dfb30dd"}}
              :main-opts   ["-m" "cognitect.test-runner"]}
 
-  ;; clj-kondo as a Clojars lib (no Homebrew/system install needed).
-  :lint     {:extra-deps {clj-kondo/clj-kondo {:mvn/version "2024.09.27"}}
-             :main-opts  ["-m" "clj-kondo.main" "--lint" "src" "test"]}}}
+  ;; clj-kondo as a Clojars lib (no Homebrew/system install needed). --fail-level
+  ;; error so clj-kondo actually gates CI (the version this replaced had no
+  ;; --fail-level and so exited 0 even with real errors).
+  :lint     {:replace-deps {clj-kondo/clj-kondo {:mvn/version "2024.11.14"}}
+             :main-opts ["-m" "clj-kondo.main" "--lint" "src" "test"
+                         "--fail-level" "error"]}}}

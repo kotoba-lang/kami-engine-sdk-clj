@@ -35,7 +35,7 @@
                            {:system :a :order 10}
                            {:system :b :order 20}])]
     (is (= [:a :b :c] (mapv :system s)))
-    (is (every? #(= java.lang.Long (type (:order %))) s))
+    (is (every? #(int? (:order %)) s))
     (testing "missing :order defaults to 0"
       (let [s2 (sched/schedule [{:system :z} {:system :y :order -1}])]
         (is (= [:y :z] (mapv :system s2)))))))

@@ -129,8 +129,9 @@
         (is (= :pbr (:draw/pipeline (first draws))))
         (is (= 2 (-> draws first :draw/instances :count)))
         (is (= 32 (-> draws first :draw/instances :model count))))) ; 2 × mat4(16)
-    (testing "frame is serializable plain data (record/replay surface)"
-      (is (= fr (read-string (pr-str fr)))))))
+    #?(:clj
+       (testing "frame is serializable plain data (record/replay surface)"
+         (is (= fr (edn/read-string (pr-str fr))))))))
 
 (deftest render-camera-translation
   (let [w (ecs/load-snapshot snap)
