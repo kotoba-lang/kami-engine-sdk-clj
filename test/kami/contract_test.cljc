@@ -103,10 +103,18 @@
 
 #?(:clj
    (deftest render-authority-edn
-     (let [artifact (-> "kami/render/authority.edn"
-                        io/resource
-                        slurp
-                        edn/read-string)]
+     ;; resources/kami/render/authority.edn is stored as Datomic/Datascript
+     ;; tx-data ([{:db/id -1 ...}], non-scalar values pr-str'd into blob
+     ;; strings) so it can be transacted as-is into a Datalog store.
+     ;; Reconstitute the plain map (same shape #'authority/reconstitute-entity
+     ;; produces) before comparing against authority/authority-edn.
+     (let [tx-data (-> "kami/render/authority.edn"
+                       io/resource
+                       slurp
+                       edn/read-string)
+           artifact (#'authority/reconstitute-entity tx-data)]
+       (is (= 1 (count tx-data)))
+       (is (contains? (first tx-data) :db/id))
        (is (= artifact authority/authority))
        (is (= artifact authority/authority-edn))
        (is (authority/validate artifact))
