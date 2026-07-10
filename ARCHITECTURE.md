@@ -81,7 +81,7 @@ is the正本 for the SDK's boundaries; it is the clj-side sibling of the engine'
                 ▼
 ┌──────────────────────────────────────────────────────────────────────┐
 │ L2  kami.render — render-IR builder: Datalog/ECS query → draw-list     │
-│     kami.wgsl   — WGSL shader authored as clj data → WGSL string       │
+│     kami.wgsl-emit   — WGSL shader authored as clj data → WGSL string       │
 └───────────────┬──────────────────────────────────────────────────────┘
                 ▼
 ┌──────────────────────────────────────────────────────────────────────┐
@@ -112,7 +112,7 @@ clj+Datomic and WebGPU live in different processes. Three roles, one shared
    │  · Datomic (source of truth) │        │  · kami.ecs in-memory store    │
    │  · kami.db  Datalog queries  │ transit│  · kami.sim 60 fps tick        │
    │  · kami.scene/snapshot ──────┼───────▶│  · kami.render → render-IR     │
-   │  · kami.wgsl → WGSL strings  │ (HTTP/ │  · kami.ipc → columnar buffer  │
+   │  · kami.wgsl-emit → WGSL strings  │ (HTTP/ │  · kami.ipc → columnar buffer  │
    │  · editor commits (tx-data) ◀┼─ WS)   │  · kami.gpu  ─────┐            │
    └─────────────────────────────┘        └────────────────────┼──────────┘
                                                                 ▼ JS interop
@@ -236,7 +236,7 @@ Design rules:
 - **Built-in pipelines** map to `kami-render::scene_pipelines` by keyword
   (`:sky :terrain :vegetation :character :water :voxel :particle :atlas :pbr`).
 - **Custom pipelines** are `:draw/pipeline <shader-asset-id>`, registered once via
-  §8 from `kami.wgsl` output.
+  §8 from `kami.wgsl-emit` output.
 - render-IR is **serializable and diffable** — it's the natural record/replay and
   golden-test surface (snapshot a frame's IR, compare bytes).
 
@@ -244,8 +244,8 @@ Design rules:
 
 ## 8. WGSL as data + the additive WIT contract
 
-### 8a. `kami.wgsl` — shaders authored as Clojure data
-A shader is a map; `kami.wgsl/emit` produces a WGSL string. This keeps shader
+### 8a. `kami.wgsl-emit` — shaders authored as Clojure data
+A shader is a map; `kami.wgsl-emit/emit` produces a WGSL string. This keeps shader
 authoring in clj (composable, testable) without re-implementing a GPU.
 
 ```clojure
@@ -258,7 +258,7 @@ authoring in clj (composable, testable) without re-implementing a GPU.
                  :body '[(set! color (vec4 0.3 0.6 1.0 1.0))]}}
 ```
 
-`kami.wgsl/emit` lowers the small s-expression body (`set!`, `*`, `vec4`,
+`kami.wgsl-emit/emit` lowers the small s-expression body (`set!`, `*`, `vec4`,
 swizzles, `if`, `let`) to WGSL. Start with a thin subset; expand as scenes need
 it. Built-in pipelines need no WGSL — they reuse `kami-render`'s shipped shaders.
 
@@ -272,7 +272,7 @@ interface frame {
   // Upload-once, keyed by asset id. Idempotent on identical bytes.
   register-mesh:     func(id: string, vertices: list<f32>, indices: list<u32>) -> u32;
   register-material: func(id: string, params: list<f32>) -> u32;
-  // clj-authored WGSL (kami.wgsl/emit) → a pipeline id. layout is the bind-group plan.
+  // clj-authored WGSL (kami.wgsl-emit/emit) → a pipeline id. layout is the bind-group plan.
   register-shader:   func(id: string, wgsl: string, layout: string) -> u32;
   // Tiny JSON draw-table + the KAMI IPC columnar buffer (§9). Zero-copy matrices.
   submit-frame:      func(meta: string, ir-ptr: u32, ir-len: u32);
@@ -335,7 +335,7 @@ mesh/material/pipeline each column maps to) travel as JSON. The Rust decoder
 | `kami.sim` | cljc | ✅ impl (RAF cljs) | fixed-step loop, system registry, save | `defsystem` `register!` `step` `commit!` `render-once` `run!` |
 | `kami.render` | cljc | ✅ impl | render-IR builder from ECS (instancing + camera) | `frame` `camera-ir` `draws-for` `merge-instances` `nintendo-cream` |
 | `kami.math` | cljc | ✅ impl | column-major 4×4 matrix math | `mul` `from-trs` `perspective` `invert-rigid` `identity4` |
-| `kami.wgsl` | cljc | ✅ impl | WGSL-as-data emitter (subset) | `emit` `emit-struct` `emit-stage` `builtin?` |
+| `kami.wgsl-emit` | cljc | ✅ impl | WGSL-as-data emitter (subset) | `emit` `emit-struct` `emit-stage` `builtin?` |
 | `kami.ipc` | cljc | ✅ impl | render-IR → KAMI columnar buffer | `pack` `column` `dtype` `byte-len` |
 | `kami.gpu` | cljc | ✅ impl | `IGpuBackend` protocol + frontend (`submit!`/`ensure-assets!`) | `IGpuBackend` `backend` `register-mesh!` `register-shader!` `submit!` `ensure-assets!` |
 | `kami.backend.browser` | cljs | 🚧 stub | WASM/WebGPU backend via `kami-render` (needs §8b WIT) | `make` (impls IGpuBackend) |
@@ -420,7 +420,7 @@ IR is serializable for record/replay/golden tests (§7).
 1. Datomic flavor — Cloud / On-Prem (Peer) / **Datahike or datalevin** as an
    OSS, blockchain-friendly Datalog store given `root/`'s "no Datomic" platform
    note? The schema (§5) and `kami.db` API are Datalog-portable; pick at impl.
-2. WGSL subset scope for `kami.wgsl` — how much of WGSL to cover before falling
+2. WGSL subset scope for `kami.wgsl-emit` — how much of WGSL to cover before falling
    back to raw WGSL strings.
 3. Snapshot granularity — whole-scene vs streaming sub-DAGs (for open-world,
    align with `kami-pipelines` chunk streaming).

@@ -11,7 +11,7 @@
             [kami.render :as render]
             [kami.render.authority :as authority]
             [kami.ipc    :as ipc]
-            [kami.wgsl   :as wgsl]
+            [kami.wgsl-emit   :as wgsl]
             [kami.postfx :as postfx]
             [kami.physics-compute :as physics]
             [kami.fsm    :as fsm]
@@ -199,7 +199,7 @@
 
 ;; --- postfx CLJC-authored WGSL (Phase 2.3) ----------------------------------
 ;;
-;; Postfx passes authored as EDN data via kami.postfx → kami.wgsl/emit. These
+;; Postfx passes authored as EDN data via kami.postfx → kami.wgsl-emit/emit. These
 ;; tests assert the emitted WGSL contains the expected structural tokens
 ;; (uniform bindings, the postfx math, @fragment) the same way `wgsl-emit`
 ;; does. Pure data → string; no GPU.
@@ -223,7 +223,7 @@
 (deftest postfx-vignette-emit
   (let [src (postfx/emit-postfx :vignette)]
     (testing "name header"
-      (is (re-find #"// kami.wgsl emitted shader: postfx_vignette" src)))
+      (is (re-find #"// kami.wgsl-emit emitted shader: postfx_vignette" src)))
     (testing "fullscreen-triangle vertex math"
       (is (re-find #"@builtin\(vertex_index\) vi: u32," src))
       (is (re-find #"\(in\.vi << 1u\) & 2u" src))
@@ -236,7 +236,7 @@
 (deftest postfx-pixelate-emit
   (let [src (postfx/emit-postfx :pixelate)]
     (testing "name header"
-      (is (re-find #"// kami.wgsl emitted shader: postfx_pixelate" src)))
+      (is (re-find #"// kami.wgsl-emit emitted shader: postfx_pixelate" src)))
     (testing "pixelate math: snap uv to block grid, sample at block center"
       (is (re-find #"let block = p\.p0\.x;" src))
       (is (re-find #"textureDimensions\(tex, 0\)" src))
@@ -247,7 +247,7 @@
 (deftest postfx-outline-emit
   (let [src (postfx/emit-postfx :outline)]
     (testing "name header"
-      (is (re-find #"// kami.wgsl emitted shader: postfx_outline" src)))
+      (is (re-find #"// kami.wgsl-emit emitted shader: postfx_outline" src)))
     (testing "outline math: 4-neighbor edge detection, strength gain"
       (is (re-find #"let texel = p\.p0\.xy;" src))
       (is (re-find #"let c = textureSample\(tex, samp, in\.uv\)\.rgb;" src))

@@ -9,7 +9,7 @@
 
   Every postfx pass is a fullscreen fragment pass: one oversized-triangle vertex
   shader feeds a UV, and the fragment shader samples an input texture and writes
-  one RGBA color. The shader-as-data maps here go straight through `kami.wgsl/emit`
+  one RGBA color. The shader-as-data maps here go straight through `kami.wgsl-emit/emit`
   (which already supports `:vertex` + `:fragment` stages). No `@compute` is needed
   for postfx; this ns deliberately does NOT touch the emitter core (Phase 2.1).
 
@@ -23,7 +23,7 @@
   any postfx pass with the same bind-group layout. Per-shader semantics of p0/p1
   are documented on each shader below.
 
-  The body sub-language understood by `kami.wgsl/emit` is a small s-expression
+  The body sub-language understood by `kami.wgsl-emit/emit` is a small s-expression
   subset: `set!`, `let`, `vec2..4`/`mat3..4` constructors, binops (+,-,*,/),
   generic WGSL function calls (`(dot a b)` → `dot(a, b)`), and dotted symbols
   (`in.uv`, `p.p0.x` preserved). Binops lower to WGSL infix, so arithmetic is
@@ -33,7 +33,7 @@
   `.rgb` swizzles on sampled textures in the fragment stage. This keeps the bulk
   of authoring in composable EDN while not pretending the subset is bigger than
   it is."
-  (:require [kami.wgsl :as wgsl]))
+  (:require [kami.wgsl-emit :as wgsl]))
 
 ;; --- shared fullscreen-triangle vertex stage --------------------------------
 ;;
@@ -47,7 +47,7 @@
 (def ^:private fullscreen-vertex
   "Vertex stage shared by all postfx passes. `vi` is `@builtin(vertex_index)`; UV
   in [0,1] is derived from the triangle position; `clip` is the framebuffer
-  coordinate. Returns the `:vertex` sub-map consumed by `kami.wgsl/emit`."
+  coordinate. Returns the `:vertex` sub-map consumed by `kami.wgsl-emit/emit`."
   {:in  [[:vi :u32 {:builtin :vertex_index}]]
    :out [[:clip :vec4<f32> :builtin/position]
          [:uv   :vec2<f32> {:location 0}]]
@@ -83,7 +83,7 @@
     p0.y, p0.z, p0.w = (unused)
 
   Math: vig = clamp(1 - strength * 2 * dot(uv-0.5, uv-0.5), 0, 1); color *= vig.
-  Returns a shader-as-data map suitable for `kami.wgsl/emit`."
+  Returns a shader-as-data map suitable for `kami.wgsl-emit/emit`."
   []
   {:wgsl/name "postfx_vignette"
    :wgsl/bindings (postfx-bindings)
@@ -107,7 +107,7 @@
     p0.y = (unused)
 
   Math: snap uv to the block grid, sample at the block center in UV space.
-  Returns a shader-as-data map suitable for `kami.wgsl/emit`."
+  Returns a shader-as-data map suitable for `kami.wgsl-emit/emit`."
   []
   {:wgsl/name "postfx_pixelate"
    :wgsl/bindings (postfx-bindings)
@@ -134,7 +134,7 @@
     p0.z = strength — edge gain multiplier
 
   Math: sample 4-neighbors, sum |center - neighbor|, add strength*edge to color.
-  Returns a shader-as-data map suitable for `kami.wgsl/emit`."
+  Returns a shader-as-data map suitable for `kami.wgsl-emit/emit`."
   []
   {:wgsl/name "postfx_outline"
    :wgsl/bindings (postfx-bindings)
@@ -161,7 +161,7 @@
 
 (defn postfx-shader
   "Return the shader-as-data map for postfx `kind` (a keyword: `:vignette`,
-  `:pixelate`, `:outline`). The map is suitable for `kami.wgsl/emit`. Pure."
+  `:pixelate`, `:outline`). The map is suitable for `kami.wgsl-emit/emit`. Pure."
   [kind]
   (case kind
     :vignette (vignette-shader)

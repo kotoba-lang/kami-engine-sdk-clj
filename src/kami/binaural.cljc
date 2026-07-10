@@ -36,7 +36,7 @@
   mixer): CLJ authors + emits; native stays the sample mixer. Do NOT route
   live playback through `:wgsl`."
   (:require [kami.math :as m]
-            [kami.wgsl :as wgsl]))
+            [kami.wgsl-emit :as wgsl]))
 
 ;; --- physical + default constants ------------------------------------------
 
@@ -241,7 +241,7 @@
   stereo[2u * i + 1u] = gain_r * sr;")
 
 (defn binaural-wgsl-shader
-  "Return the binaural offline-bounce @compute kernel as a `kami.wgsl` data map.
+  "Return the binaural offline-bounce @compute kernel as a `kami.wgsl-emit` data map.
   One workgroup invocation = one output sample; 64 samples per workgroup,
   dispatch `ceil(num_samples / 64, 1, 1)` groups. The kernel reads `sources[0]`
   (single-source bounce), spatializes it (ITD/ILD/gain/delay matching
@@ -257,7 +257,7 @@
                   :wgsl/body      binaural-wgsl-body}})
 
 (defn binaural-wgsl-emit
-  "Return the binaural bounce WGSL source string via `kami.wgsl/emit`. Pure."
+  "Return the binaural bounce WGSL source string via `kami.wgsl-emit/emit`. Pure."
   []
   (wgsl/emit (binaural-wgsl-shader)))
 

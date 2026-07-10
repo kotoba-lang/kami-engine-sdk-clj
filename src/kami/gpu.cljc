@@ -16,7 +16,7 @@
   (register-material! [backend id params]
     "Upload material params (f32 vector) under asset `id`.")
   (register-shader!   [backend id wgsl layout]
-    "Register clj-authored WGSL (from `kami.wgsl/emit`) as a pipeline under `id`.")
+    "Register clj-authored WGSL (from `kami.wgsl-emit/emit`) as a pipeline under `id`.")
   (register-texture!  [backend id width height rgba]
     "Upload an RGBA8 texture (row-major, 4 B/px) under asset `id` (image / glyph atlas).")
   (register-text!     [backend id text size]

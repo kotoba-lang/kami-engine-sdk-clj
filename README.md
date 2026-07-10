@@ -15,7 +15,7 @@ In short:
 - **`kami.ecs` / `kami.sim`** — the durable Datalog store is projected into a
   dense in-memory ECS for the 60 fps tick; Datomic is consulted only at
   load/save boundaries, never per frame.
-- **`kami.render` / `kami.wgsl` / `kami.ipc`** — a pure-data render-IR (draw
+- **`kami.render` / `kami.wgsl-emit` / `kami.ipc`** — a pure-data render-IR (draw
   lists, instancing) is built from the ECS each frame, shaders can be
   authored as clj data and lowered to WGSL, and the frame is packed into the
   zero-copy KAMI IPC columnar buffer.
@@ -53,7 +53,7 @@ embeds). Do not confuse the two:
 ## Status
 
 Design + working core + GPU bridge (as of the source snapshot, 2026-06-13).
-The clj contract layer (`kami.scene`, `kami.ecs`, `kami.render`, `kami.wgsl`,
+The clj contract layer (`kami.scene`, `kami.ecs`, `kami.render`, `kami.wgsl-emit`,
 `kami.ipc`, `kami.gpu`, `kami.sim`, `kami.math`, etc.) is implemented and
 covered by tests. `kami.backend.browser` (the live WASM/WebGPU bridge) and
 `kami.backend.host` (an optional headless backend) are stubs — see

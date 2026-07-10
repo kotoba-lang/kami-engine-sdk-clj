@@ -1,6 +1,6 @@
 (ns kami.physics-compute
   "Phase 2.1 (ADR-CLJ-2607010930) — physics solver kernels authored as
-  `kami.wgsl` data with `@compute` workgroup entry points.
+  `kami.wgsl-emit` data with `@compute` workgroup entry points.
 
   The clj-wgsl migration invariant: the per-element hot loop runs on GPU as
   WGSL @compute; CLJ only authors (edit time) and dispatches (coarse-grained,
@@ -9,12 +9,12 @@
   `kami-genesis/src/wgsl/cartpole_step.wgsl` formula-for-formula.
 
   Storage-buffer indexing (`states[i]`), `if/return` early-out, and `var s: State`
-  declarations exceed the small s-expr → WGSL lowering subset in `kami.wgsl`,
+  declarations exceed the small s-expr → WGSL lowering subset in `kami.wgsl-emit`,
   so the compute body uses the `:wgsl/body` raw-WGSL escape hatch. The
   surrounding `@compute @workgroup_size(...)` scaffolding, struct decls, and
   storage bindings remain fully data-driven. Phase 2.2 (audio DSP) may extend
   the s-expr subset or keep the escape hatch — the surface is additive."
-  (:require [kami.wgsl :as wgsl]))
+  (:require [kami.wgsl-emit :as wgsl]))
 
 ;; --- cartpole step ----------------------------------------------------------
 
@@ -74,7 +74,7 @@
   states[i] = s;")
 
 (defn cartpole-step-shader
-  "Return the cartpole semi-implicit Euler integrator as a `kami.wgsl` data map.
+  "Return the cartpole semi-implicit Euler integrator as a `kami.wgsl-emit` data map.
   One workgroup invocation = one environment; 64 envs per workgroup, dispatch
   `ceil(num_envs / 64, 1, 1)` groups. Mirrors
   `kami-genesis/src/wgsl/cartpole_step.wgsl`."
@@ -89,6 +89,6 @@
                    :wgsl/body      cartpole-step-body}})
 
 (defn cartpole-step-emit
-  "Return the cartpole step WGSL source string via `kami.wgsl/emit`. Pure."
+  "Return the cartpole step WGSL source string via `kami.wgsl-emit/emit`. Pure."
   []
   (wgsl/emit (cartpole-step-shader)))

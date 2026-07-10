@@ -22,7 +22,7 @@
   CPU intersector (`cpu-trace`) is included so the IR's *semantics* are testable
   without a GPU; it is a reference oracle, never the shipping path."
   (:require [kami.math :as m]
-            [kami.wgsl :as wgsl]))
+            [kami.wgsl-emit :as wgsl]))
 
 ;; --- helpers ----------------------------------------------------------------
 
@@ -134,8 +134,8 @@
 (defn emit-wgsl
   "Emit a WGSL ray-query compute shader from the IR. Integrator parameters
   (bounces / spp / clamp / seed) are baked as override constants so the same IR
-  recompiles per quality preset. Uses kami.wgsl for struct emission and a raw
-  WGSL body (the escape hatch kami.wgsl documents for forms outside its subset)."
+  recompiles per quality preset. Uses kami.wgsl-emit for struct emission and a raw
+  WGSL body (the escape hatch kami.wgsl-emit documents for forms outside its subset)."
   [ir]
   (let [{:keys [rt/integrator rt/sampler]} ir
         bounces (:max-bounces integrator)

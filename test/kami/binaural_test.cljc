@@ -111,7 +111,7 @@
 (deftest binaural-wgsl-shader-structure
   (let [src (b/binaural-wgsl-emit)]
     (testing "name header"
-      (is (re-find #"// kami.wgsl emitted shader: binaural_bounce" src)))
+      (is (re-find #"// kami.wgsl-emit emitted shader: binaural_bounce" src)))
     (testing "@compute entry-point scaffolding"
       (is (re-find #"@compute @workgroup_size\(64, 1, 1\)" src))
       (is (re-find #"fn binaural_main\(@builtin\(global_invocation_id\) gid: vec3<u32>\)" src)))

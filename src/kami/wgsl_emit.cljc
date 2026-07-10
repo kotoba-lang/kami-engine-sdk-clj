@@ -1,4 +1,4 @@
-(ns kami.wgsl
+(ns kami.wgsl-emit
   "L2 — WGSL shaders authored as Clojure data → WGSL source string.
 
   Keeps shader authoring in clj (composable, testable, diffable) WITHOUT
@@ -202,7 +202,7 @@
   vertex/fragment/compute stages present in the map (compute: Phase 2.1)."
   [{:keys [:wgsl/name :wgsl/bindings :wgsl/structs
            :wgsl/vertex :wgsl/fragment :wgsl/compute]}]
-  (str "// kami.wgsl emitted shader: " name "\n"
+  (str "// kami.wgsl-emit emitted shader: " name "\n"
        (apply str (map (fn [[n fs]] (emit-struct n fs)) structs))
        (apply str (map emit-binding bindings))
        (when vertex  (emit-stage :vertex vertex))
