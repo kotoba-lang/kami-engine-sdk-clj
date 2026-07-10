@@ -52,12 +52,31 @@
      :pipeline/role :atlas-sprite
      :pipeline/adapter "kami_render::scene_pipelines::atlas"}]})
 
+;; resources/kami/render/authority.edn is stored as Datomic/Datascript tx-data
+;; ([{:db/id -1, :authority/id ..., :render/pipelines "pr-str'd blob", ...}]) so
+;; it can be transacted as-is into a Datalog store. Non-scalar values (nested
+;; maps, vectors-of-maps) are pr-str'd into blob strings by that transform, so
+;; reading the resource back into the plain map this namespace's callers expect
+;; requires unwrapping the single entity and un-blobbing those values.
+#?(:clj
+   (defn- unblob [v]
+     (if (string? v)
+       (try (let [parsed (edn/read-string v)] (if (coll? parsed) parsed v))
+            (catch Exception _ v))
+       v)))
+
+#?(:clj
+   (defn- reconstitute-entity [tx-data]
+     (into {} (map (fn [[k v]] [k (unblob v)]))
+           (dissoc (first tx-data) :db/id))))
+
 #?(:clj
    (defn- read-resource []
      (some-> "kami/render/authority.edn"
              io/resource
              slurp
-             edn/read-string)))
+             edn/read-string
+             reconstitute-entity)))
 
 (def authority
   #?(:clj (or (read-resource) authority-edn)
