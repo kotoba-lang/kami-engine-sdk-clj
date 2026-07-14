@@ -28,6 +28,11 @@ In short:
   (`kami:engine/frame@1.0.0`) for the clj ↔ Rust boundary: upload-once
   resource registration (mesh/material/shader) plus one `submit-frame` call
   per frame.
+- **`kami.benchmark`** — the shared sample-game benchmark contract: validates
+  2D/3D genre manifests, resolves `:playable` / `:showcase` / `:meltdown`
+  quality tiers, records portable telemetry frames, and drives capped meltdown
+  load ramps. See `resources/kami/samples/isekai-swarm.edn` for a manifest that
+  can be consumed unchanged by Studio, browser, native, and headless runners.
 
 ## Origin
 
