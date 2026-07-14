@@ -16,6 +16,14 @@
 
 (def dimensions #{:2d :3d})
 
+(def required-scenario-keys
+  #{:scenario/id :scenario/seed :scenario/ticks :scenario/fixed-step-ms
+    :scenario/inputs})
+
+(def required-result-keys
+  #{:result/sample :result/scenario :result/tier :result/build
+    :result/profile :result/measurements :result/simulation-digest})
+
 (def metric-units
   {:frame/fps :hz
    :frame/cpu-ms :ms
@@ -107,3 +115,136 @@
     (when-not (and initial step maximum)
       (fail "meltdown tier has no :load ramp" {:sample (:sample/id manifest)}))
     (min maximum (+ (or current (- initial step)) step))))
+
+(defn valid-scenario?
+  "Validate a deterministic, host-independent benchmark scenario.
+
+  Inputs are a vector of maps with a non-negative :tick and an :action value.
+  Multiple inputs at one tick retain vector order. The runner never reads a
+  wall clock: :scenario/fixed-step-ms is the complete time source."
+  [scenario]
+  (let [missing (set/difference required-scenario-keys (set (keys scenario)))
+        inputs (:scenario/inputs scenario)]
+    (when (seq missing) (fail "scenario is missing required keys" {:missing missing}))
+    (when-not (keyword? (:scenario/id scenario))
+      (fail ":scenario/id must be a keyword" {:value (:scenario/id scenario)}))
+    (when-not (integer? (:scenario/seed scenario))
+      (fail ":scenario/seed must be an integer" {:value (:scenario/seed scenario)}))
+    (when-not (pos-int? (:scenario/ticks scenario))
+      (fail ":scenario/ticks must be a positive integer" {:value (:scenario/ticks scenario)}))
+    (when-not (and (number? (:scenario/fixed-step-ms scenario))
+                   (pos? (:scenario/fixed-step-ms scenario)))
+      (fail ":scenario/fixed-step-ms must be positive" {}))
+    (when-not (vector? inputs)
+      (fail ":scenario/inputs must be a vector" {:value inputs}))
+    (doseq [input inputs]
+      (when-not (and (map? input) (integer? (:tick input))
+                     (<= 0 (:tick input)) (< (:tick input) (:scenario/ticks scenario))
+                     (contains? input :action))
+        (fail "scenario input must contain an in-range :tick and :action"
+              {:input input :ticks (:scenario/ticks scenario)})))
+    true))
+
+(defn- canonical-value [value]
+  (cond
+    (map? value) (into (sorted-map-by #(compare (pr-str %1) (pr-str %2)))
+                       (map (fn [[k v]] [k (canonical-value v)])) value)
+    (set? value) [:set (->> value (map canonical-value) (sort-by pr-str) vec)]
+    (sequential? value) (mapv canonical-value value)
+    :else value))
+
+(defn deterministic-digest
+  "Return a portable signed 32-bit FNV-1a digest of EDN data.
+
+  Maps and sets are canonicalized first, so insertion/iteration order cannot
+  change the digest. This is a correctness/replay marker, not a security hash."
+  [value]
+  (reduce (fn [hash char]
+            (let [code #?(:clj (int char)
+                          :cljs (.charCodeAt char 0))
+                  mixed (bit-xor hash code)]
+              #?(:clj (unchecked-multiply-int (int mixed) (int 16777619))
+                 :cljs (js/Math.imul mixed 16777619))))
+          #?(:clj (unchecked-int 2166136261)
+             :cljs 2166136261)
+          (pr-str (canonical-value value))))
+
+(defn run-headless
+  "Execute scenario with pure `(step-fn state frame)` calls.
+
+  `initial-state-fn` receives the declared seed. Each frame contains :tick,
+  :dt-ms and the ordered :inputs for that tick. Returns final state and digest;
+  consumers may discard :headless/final-state when persisting evidence."
+  [scenario initial-state-fn step-fn]
+  (valid-scenario? scenario)
+  (let [by-tick (group-by :tick (:scenario/inputs scenario))
+        final-state
+        (reduce (fn [state tick]
+                  (step-fn state {:tick tick
+                                  :dt-ms (:scenario/fixed-step-ms scenario)
+                                  :inputs (vec (get by-tick tick []))}))
+                (initial-state-fn (:scenario/seed scenario))
+                (range (:scenario/ticks scenario)))]
+    {:headless/scenario (:scenario/id scenario)
+     :headless/ticks (:scenario/ticks scenario)
+     :headless/final-state final-state
+     :headless/simulation-digest (deterministic-digest final-state)}))
+
+(defn valid-result?
+  "Validate the machine-readable M0 result envelope against a manifest."
+  [manifest result]
+  (valid-manifest? manifest)
+  (let [missing (set/difference required-result-keys (set (keys result)))
+        measurements (:result/measurements result)
+        unknown (set/difference (set (keys measurements))
+                                (set (:sample/metrics manifest)))]
+    (when (seq missing) (fail "result is missing required keys" {:missing missing}))
+    (when-not (= (:sample/id manifest) (:result/sample result))
+      (fail "result sample does not match manifest" {:value (:result/sample result)}))
+    (quality-config manifest (:result/tier result))
+    (when-not (and (keyword? (:result/scenario result))
+                   (string? (:result/build result)) (seq (:result/build result))
+                   (keyword? (:result/profile result))
+                   (map? measurements)
+                   (integer? (:result/simulation-digest result)))
+      (fail "result envelope has invalid field types" {:result result}))
+    (when (seq unknown) (fail "result contains undeclared metrics" {:unknown unknown}))
+    (when-not (every? number? (vals measurements))
+      (fail "result measurements must be numeric" {:measurements measurements}))
+    true))
+
+(defn compare-results
+  "Compare candidate with a compatible baseline.
+
+  `thresholds` maps metrics to maximum relative regression ratios. Direction
+  defaults to :lower-is-better; use `higher-is-better` for FPS/throughput.
+  Digest mismatch is always a failure, independent of performance thresholds."
+  [manifest baseline candidate thresholds higher-is-better]
+  (valid-result? manifest baseline)
+  (valid-result? manifest candidate)
+  (doseq [key [:result/sample :result/scenario :result/tier :result/profile]]
+    (when-not (= (get baseline key) (get candidate key))
+      (fail "baseline and candidate are not comparable"
+            {:key key :baseline (get baseline key) :candidate (get candidate key)})))
+  (let [digest-match? (= (:result/simulation-digest baseline)
+                         (:result/simulation-digest candidate))
+        comparisons
+        (into (sorted-map)
+              (for [[metric threshold] thresholds]
+                (let [before (get-in baseline [:result/measurements metric])
+                      after (get-in candidate [:result/measurements metric])]
+                  (when-not (and (number? before) (number? after) (pos? before)
+                                 (number? threshold) (not (neg? threshold)))
+                    (fail "comparison requires positive baseline and threshold"
+                          {:metric metric :baseline before :candidate after
+                           :threshold threshold}))
+                  (let [regression (if (contains? higher-is-better metric)
+                                     (/ (- before after) before)
+                                     (/ (- after before) before))]
+                    [metric {:baseline before :candidate after
+                             :regression-ratio regression
+                             :threshold-ratio threshold
+                             :pass? (<= regression threshold)}]))))]
+    {:comparison/pass? (and digest-match? (every? :pass? (vals comparisons)))
+     :comparison/digest-match? digest-match?
+     :comparison/metrics comparisons}))

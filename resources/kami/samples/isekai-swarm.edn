@@ -2,6 +2,14 @@
  :sample/title "Isekai Swarm"
  :sample/dimension :2d
  :sample/genre :action-roguelite
+ :sample/scenarios
+ [{:scenario/id :isekai-swarm/reduced-ci
+   :scenario/seed 7
+   :scenario/ticks 600
+   :scenario/fixed-step-ms 16.666667
+   :scenario/inputs [{:tick 30 :action :move :value [1 0]}
+                     {:tick 180 :action :ability/primary :value true}
+                     {:tick 181 :action :ability/primary :value false}]}]
  :sample/metrics [:frame/fps :frame/cpu-ms :frame/gpu-ms
                   :render/draw-calls :render/dispatch-calls
                   :render/visible-entities :render/particles

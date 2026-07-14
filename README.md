@@ -36,8 +36,13 @@ In short:
 - **`kami.benchmark`** — the shared sample-game benchmark contract: validates
   2D/3D genre manifests, resolves `:playable` / `:showcase` / `:meltdown`
   quality tiers, records portable telemetry frames, and drives capped meltdown
-  load ramps. See `resources/kami/samples/isekai-swarm.edn` for a manifest that
-  can be consumed unchanged by Studio, browser, native, and headless runners.
+  load ramps. It also validates fixed-step scenarios, runs pure headless
+  fixtures with a canonical deterministic digest, validates result envelopes,
+  and compares candidates to hardware-profile baselines (including the ADR's
+  10% p95 regression gate). See `resources/kami/samples/isekai-swarm.edn` for
+  a manifest and reduced-CI scenario that can be consumed unchanged by Studio,
+  browser, native, and headless runners. `deterministic-digest` is a portable
+  replay/correctness marker, not a cryptographic integrity hash.
 
 ## Origin
 
