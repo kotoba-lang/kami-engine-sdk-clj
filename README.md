@@ -43,6 +43,13 @@ In short:
   a manifest and reduced-CI scenario that can be consumed unchanged by Studio,
   browser, native, and headless runners. `deterministic-digest` is a portable
   replay/correctness marker, not a cryptographic integrity hash.
+- **`kami.network`** — the M2 multiplayer thin contract: versioned input
+  envelopes, per-client authoritative sequence acceptance, tick/client/sequence
+  total ordering, snapshots with acknowledgements, client reconciliation with
+  pending-input replay, and deterministic loss/delay/jitter injection. It is a
+  pure-data transport seam, not a production socket stack or an 8-player
+  performance claim. `resources/kami/samples/nightglass-strike-m2.edn` describes
+  the reduced eight-bot contract fixture used by tests.
 
 ## Origin
 
