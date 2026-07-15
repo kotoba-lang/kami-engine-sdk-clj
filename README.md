@@ -43,6 +43,9 @@ In short:
   a manifest and reduced-CI scenario that can be consumed unchanged by Studio,
   browser, native, and headless runners. `deterministic-digest` is a portable
   replay/correctness marker, not a cryptographic integrity hash.
+  It also validates Studio's `kami.performance-plan/v1` and runs its 2D/3D
+  saturation ramp through an injected host measurement adapter, computing p95
+  and stopping on the first frame-time or memory-budget violation.
 - **`kami.sample-manifest`** — pure-data M5 catalog authoring helpers. `scaffold`
   creates schema-v2 EDN, `migrate-manifest` explicitly upgrades legacy v1 data,
   and `valid?` checks capability, lifecycle, license, and public source/fork/

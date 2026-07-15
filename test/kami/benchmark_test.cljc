@@ -42,6 +42,42 @@
   (is (= 15000 (benchmark/next-meltdown-load manifest 10000)))
   (is (= 100000 (benchmark/next-meltdown-load manifest 99000))))
 
+(def performance-plan
+  {:schema "kami.performance-plan/v1" :dimension "3d" :workload "mesh-density"
+   :samples [{:entities 100 :durationMs 5000 :warmupFrames 60}
+             {:entities 200 :durationMs 5000 :warmupFrames 60}
+             {:entities 300 :durationMs 5000 :warmupFrames 60}]
+   :budgets {:frameTimeP95Ms 16.7 :memoryMaxMiB 512}
+   :stopOnFirstViolation true})
+
+(deftest portable-performance-plan-contract
+  (is (true? (benchmark/valid-performance-plan? performance-plan)))
+  (is (= 15.0 (benchmark/percentile [1.0 15.0 8.0 4.0] 0.95)))
+  (is (thrown? #?(:clj Exception :cljs js/Error)
+               (benchmark/valid-performance-plan?
+                (assoc performance-plan :dimension "xr")))))
+
+(deftest saturation-runner-stops-at-first-violation
+  (let [attempts (atom [])
+        result (benchmark/run-saturation
+                performance-plan
+                (fn [{:keys [entities]}]
+                  (swap! attempts conj entities)
+                  {:frame-times-ms (if (= 200 entities) [10.0 18.0] [8.0 9.0])
+                   :memory-max-mib 256}))]
+    (is (= [100 200] @attempts))
+    (is (= :violated (:status result)))
+    (is (= 100 (:saturationEntities result)))
+    (is (= [:frame-time-p95] (-> result :results last :violations)))))
+
+(deftest saturation-runner-reports-the-tested-ceiling
+  (let [result (benchmark/run-saturation
+                (assoc performance-plan :dimension "2d")
+                (constantly {:frame-times-ms [5.0 6.0] :memory-max-mib 64}))]
+    (is (= :passed (:status result)))
+    (is (= 300 (:saturationEntities result)))
+    (is (= 3 (count (:results result))))))
+
 (def scenario
   {:scenario/id :isekai-swarm/reduced-ci
    :scenario/seed 7
