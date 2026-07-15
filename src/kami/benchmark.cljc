@@ -15,6 +15,8 @@
     :sample/tiers :sample/metrics})
 
 (def dimensions #{:2d :3d})
+(def performance-plan-schema "kami.performance-plan/v1")
+(def performance-dimensions #{"2d" "3d"})
 
 (def required-scenario-keys
   #{:scenario/id :scenario/seed :scenario/ticks :scenario/fixed-step-ms
@@ -46,6 +48,74 @@
 
 (defn- fail [message data]
   (throw (ex-info (str "benchmark: " message) data)))
+
+(defn valid-performance-plan?
+  "Validate the portable Studio/SDK saturation contract. Throws with ex-data
+  rather than silently repairing a malformed ramp."
+  [plan]
+  (when-not (= performance-plan-schema (:schema plan))
+    (fail "unknown performance plan schema" {:schema (:schema plan)}))
+  (when-not (performance-dimensions (:dimension plan))
+    (fail "performance dimension must be 2d or 3d" {:dimension (:dimension plan)}))
+  (when-not (and (string? (:workload plan)) (seq (:workload plan)))
+    (fail "performance workload is required" {:workload (:workload plan)}))
+  (when-not (and (vector? (:samples plan)) (seq (:samples plan)))
+    (fail "performance samples must be a non-empty vector" {}))
+  (doseq [{:keys [entities durationMs warmupFrames] :as sample} (:samples plan)]
+    (when-not (and (pos-int? entities) (pos-int? durationMs)
+                   (int? warmupFrames) (not (neg? warmupFrames)))
+      (fail "invalid performance sample" {:sample sample})))
+  (let [{:keys [frameTimeP95Ms memoryMaxMiB]} (:budgets plan)]
+    (when-not (and (number? frameTimeP95Ms) (pos? frameTimeP95Ms)
+                   (number? memoryMaxMiB) (pos? memoryMaxMiB))
+      (fail "performance budgets must be positive" {:budgets (:budgets plan)})))
+  (when-not (true? (:stopOnFirstViolation plan))
+    (fail "performance plan must stop on first violation" {}))
+  true)
+
+(defn percentile
+  "Nearest-rank percentile for a non-empty numeric sample."
+  [values p]
+  (when-not (and (seq values) (every? number? values) (number? p) (< 0 p) (<= p 1))
+    (fail "invalid percentile sample" {:values values :percentile p}))
+  (let [ordered (vec (sort values))
+        index (dec (int (#?(:clj Math/ceil :cljs js/Math.ceil) (* p (count ordered)))))]
+    (nth ordered index)))
+
+(defn run-saturation
+  "Execute a performance plan through injected host measurement.
+
+  `measure-sample` receives one plan sample and returns
+  `{:frame-times-ms [...] :memory-max-mib n}`. The runner computes p95 itself,
+  records every attempted load, and stops at the first budget violation."
+  [plan measure-sample]
+  (valid-performance-plan? plan)
+  (let [{:keys [frameTimeP95Ms memoryMaxMiB]} (:budgets plan)]
+    (loop [remaining (:samples plan) results []]
+      (if-let [sample (first remaining)]
+        (let [{:keys [frame-times-ms memory-max-mib] :as measured}
+              (measure-sample sample)]
+          (when-not (and (seq frame-times-ms) (every? number? frame-times-ms)
+                         (number? memory-max-mib) (not (neg? memory-max-mib)))
+            (fail "measurement adapter returned invalid data" {:measurement measured}))
+          (let [p95 (percentile frame-times-ms 0.95)
+                violations (cond-> []
+                             (> p95 frameTimeP95Ms) (conj :frame-time-p95)
+                             (> memory-max-mib memoryMaxMiB) (conj :memory-max))
+                result {:entities (:entities sample)
+                        :frameTimeP95Ms p95 :memoryMaxMiB memory-max-mib
+                        :pass? (empty? violations) :violations violations}
+                results' (conj results result)]
+            (if (seq violations)
+              {:schema "kami.performance-result/v1" :status :violated
+               :dimension (:dimension plan) :workload (:workload plan)
+               :saturationEntities (some->> results (filter :pass?) last :entities)
+               :results results'}
+              (recur (next remaining) results'))))
+        {:schema "kami.performance-result/v1" :status :passed
+         :dimension (:dimension plan) :workload (:workload plan)
+         :saturationEntities (some->> results (filter :pass?) last :entities)
+         :results results}))))
 
 (defn valid-manifest?
   "Validate a sample manifest and return true. Throws with useful ex-data.
