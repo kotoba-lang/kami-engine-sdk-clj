@@ -1,0 +1,16 @@
+{:sample/id :isekai/swarm
+ :sample/title "Isekai Swarm"
+ :sample/dimension :2d
+ :sample/genre :action-roguelite
+ :sample/metrics [:frame/fps :frame/cpu-ms :frame/gpu-ms
+                  :render/draw-calls :render/dispatch-calls
+                  :render/visible-entities :render/particles
+                  :memory/estimated-vram-mb :script/cpu-ms :script/gc-pause-ms]
+ :sample/tiers
+ {:playable {:target-fps 30
+             :budget {:render/visible-entities 5000 :render/particles 20000}}
+  :showcase {:target-fps 60
+             :budget {:render/visible-entities 10000 :render/particles 100000}}
+  :meltdown {:target-fps 60
+             :budget {:render/visible-entities 100000 :render/particles 250000}
+             :load {:unit :entities :initial 10000 :step 5000 :maximum 100000}}}}

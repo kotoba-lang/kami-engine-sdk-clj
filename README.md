@@ -33,6 +33,17 @@ In short:
   (`kami:engine/frame@1.0.0`) for the clj ↔ Rust boundary: upload-once
   resource registration (mesh/material/shader) plus one `submit-frame` call
   per frame.
+- **`kami.benchmark`** — the shared sample-game benchmark contract: validates
+  2D/3D genre manifests, resolves `:playable` / `:showcase` / `:meltdown`
+  quality tiers, records portable telemetry frames, and drives capped meltdown
+  load ramps. See `resources/kami/samples/isekai-swarm.edn` for a manifest that
+  can be consumed unchanged by Studio, browser, native, and headless runners.
+- **`kami.sim-lod`** — a pure simulation-LOD contract that keeps logical and
+  visible populations separate, staggers deterministic offscreen updates, and
+  emits formation or cyclic-schedule workloads. The Dominion, Chronicle City,
+  and Iron Front files under `resources/kami/samples/` are deliberately small
+  contract fixtures. They have not been performance-tested and are not evidence
+  for the sample suite's target entity counts or AAA-quality claims.
 
 ## Origin
 
